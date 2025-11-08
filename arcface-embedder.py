@@ -62,12 +62,12 @@ fa.prepare(ctx_id=ctx_id, det_size=(640,640)) # det_size determines precision, 3
 face_db = load_db();
 
 # --------------- Enrollment function -----------------
-def enroll_from_camera(name, n_samples=10, required_confidence=0.5, sample_delay=0.5):
+def enroll_from_camera(name, n_samples=10, required_confidence=0.5, sample_delay=1):
     func_id = "ENROLL"
 
     cap = cv2.VideoCapture(0); # Default device camera
     embeddings = []; # The array of new embeddings
-    print(f"[{func_id}] Look at the camera for {n_samples} samples ({n_samples*sample_delay} seconds)...")
+    print(f"[{func_id}] Look at the camera for {n_samples} samples...")
     
     # Loop through each sample and average at the end
     while (len(embeddings) < n_samples):
@@ -121,7 +121,7 @@ def enroll_from_camera(name, n_samples=10, required_confidence=0.5, sample_delay
 def remove_from_database(name):
     func_id = "REMOVE"
     if name in face_db:
-        face_db.remove(name)
+        del face_db[name]
         print(f"[{func_id}] Removed {name} from database.")
     else:
         print(f"[{func_id}] {name} not found in database.")
@@ -129,7 +129,76 @@ def remove_from_database(name):
 # ----------------- Clear database -------------------
 # In case you need to remove all data (mostly for testing)
 def clear_database():
+    func_id = "CLEAR"
     face_db.clear();
+
+# --------------- Recognize single frame -----------------
+def recognize(bgr, sim_threshold=0.4):
+    func_id = "RECOG"
+    best_names = []
+    best_scores = []
+
+    # Get all the faces
+    faces = fa.get(bgr)
+
+    # Check each face and compile the results to return
+    if faces:
+        for face in faces:
+            x1, y1, x2, y2 = map(int, face.bbox[:4]) # Get the bounds of the face
+            emb = l2_normalize(np.asarray(face.embedding, dtype=np.float32))
+            best_name = "Unknown" # Assume unknown until proven otherwise
+            best_score = -1 # Arbitrarily low number
+
+            # Compare the face to each face in the database and determine its score.
+            # We take the highest score face.
+            for name, db_emb in face_db.items():
+                score = cosine_sim(emb, db_emb)
+                if score > best_score:
+                    best_score = score
+                    best_name = name
+            
+            # Add the results for the face to the array
+            best_names.append(best_name)
+            best_scores.append(best_score)
+    
+    # Return the results
+    return faces, best_names, best_scores
+
+# --------------- Recognition loop -----------------
+def recognize_loop(sim_threshold=0.4, sample_delay=1):
+    func_id = "RECOG LOOP"
+
+    cap = cv2.VideoCapture(0) # Default device camera
+    print("[{func_id}] Starting webcam. Press q to quit.")
+    while True:
+
+        # Get a frame
+        ret, frame = cap.read()
+        if not ret:
+            break
+        bgr = frame
+
+        # Get the faces and scores
+        faces, best_names, best_scores = recognize(bgr, sim_threshold)
+
+        # Draw the indicators on each face
+        if faces:
+            for i in range(0, len(faces)):
+                x1, y1, x2, y2 = map(int, faces[i].bbox[:4])
+                label = f"{best_names[i]} {best_scores[i]:.3f}"
+                color = good_color if best_scores[i] >= sim_threshold else bad_color
+                cv2.rectangle(frame, (x1,y1), (x2,y2), color, 2)
+                cv2.putText(frame, label, (x1, max(0,y1-10)), main_font, 0.6, color, 2)
+        
+        # Allow the user to quit
+        cv2.imshow("Recognition - press q to quit", frame)
+        key = cv2.waitKey(sample_delay)
+        if key & 0xFF == ord('q') or key & 0xFF == ord('\x1b'): # Also allow "escape" because someone's going to try that
+            break
+
+    # When done, release the video capture and get rid of the window
+    cap.release()
+    cv2.destroyAllWindows()
 
 # ----------------- CLI-like entry -------------------
 # This bit allows command line interaction with the script. TODO remove before prod
