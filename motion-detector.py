@@ -4,12 +4,8 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Get the camera feed or video file
-vid_path = input("Video path (enter 0 for camera): ")
-if vid_path != "0":
-    cap = cv2.VideoCapture(vid_path)
-else:
-    cap = cv2.VideoCapture(0)
+# Get the camera feed
+cap = cv2.VideoCapture(0)
 
 # Setup background subtract to seperate moving/static objects
 backSub = cv2.createBackgroundSubtractorMOG2()
