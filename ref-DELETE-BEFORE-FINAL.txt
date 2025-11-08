@@ -1,0 +1,160 @@
+# This function allows for command-line use of the ArcFace facial embedder. https://www.insightface.ai/research/arcface
+
+import cv2 # For webcam capture, may be replaced on devices such as RING doorbells
+import numpy as np
+import pickle
+import os
+from insightface.app import FaceAnalysis
+
+DB_PATH = "face_db.pkl"   # stores {name: embedding(np.array)}
+
+# --------------- Helpers -----------------
+def l2_normalize(v):
+    v = np.asarray(v, dtype=np.float32)
+    return v / (np.linalg.norm(v) + 1e-10)
+
+def cosine_sim(a, b):
+    a = l2_normalize(a)
+    b = l2_normalize(b)
+    return float(np.dot(a, b))
+
+def save_db(db, path=DB_PATH):
+    with open(path, "wb") as f:
+        pickle.dump({k: v.tolist() for k, v in db.items()}, f)
+
+def load_db(path=DB_PATH):
+    if not os.path.exists(path):
+        return {}
+    with open(path, "rb") as f:
+        raw = pickle.load(f)
+    # convert lists back to numpy arrays
+    return {k: np.asarray(v, dtype=np.float32) for k, v in raw.items()}
+
+# Ensure the model folder is flattened
+def flatten_model_folder(model_dir):
+    entries = os.listdir(model_dir)
+    if len(entries) == 1 and os.path.isdir(os.path.join(model_dir, entries[0])):
+        subfolder = os.path.join(model_dir, entries[0])
+        for f in os.listdir(subfolder):
+            shutil.move(os.path.join(subfolder, f), model_dir)
+        os.rmdir(subfolder)
+
+# --------------- Face system init -----------------
+# Flatten folders to ensure model files are where they should be
+model_dir = os.path.expanduser("~/.insightface/models/antelopev2")
+flatten_model_folder(model_dir)  # <-- make sure .onnx files are directly inside
+
+# ctx_id = -1 -> CPU. If you have GPU, use ctx_id = 0 (and proper cuda/torch/onnxruntime gpu)
+ctx_id = 0
+fa = FaceAnalysis(
+    name="antelopev2",
+    det_name = "2d106det.onnx",
+    rec_name = "1k3d68.onnx",
+    providers=['CPUExecutionProvider']
+    )
+fa.prepare(ctx_id=ctx_id, det_size=(640, 640))  # det_size can be tuned
+
+# load db
+face_db = load_db()
+
+# --------------- Enrollment function -----------------
+def enroll_from_camera(name, n_samples=5, required_confidence=0.5):
+    """
+    Capture n_samples frames, extract embeddings for the largest detected face,
+    and store the average embedding under `name` in the DB.
+    """
+    cap = cv2.VideoCapture(0)
+    embeddings = []
+    print(f"[ENROLL] Look at the camera for {n_samples} samples...")
+
+    while len(embeddings) < n_samples:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        bgr = frame  # insightface expects BGR (OpenCV default)
+        faces = fa.get(bgr)
+        if faces:
+            # choose largest face by bbox area
+            face = max(faces, key=lambda x: (x.bbox[2] - x.bbox[0]) * (x.bbox[3] - x.bbox[1]))
+            if face.det_score < required_confidence:
+                cv2.putText(frame, f"Low conf {face.det_score:.2f}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,0,255),2)
+            else:
+                emb = np.asarray(face.embedding, dtype=np.float32)
+                embeddings.append(l2_normalize(emb))
+                cv2.putText(frame, f"Captured {len(embeddings)}/{n_samples}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0),2)
+
+        cv2.imshow("Enroll - press q to quit", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+    if len(embeddings) == 0:
+        print("[ENROLL] No usable faces captured.")
+        return False
+
+    avg_emb = l2_normalize(np.mean(np.stack(embeddings), axis=0))
+    face_db[name] = avg_emb
+    save_db(face_db)
+    print(f"[ENROLL] Saved {name} with {len(embeddings)} samples.")
+    return True
+
+# --------------- Recognition loop -----------------
+def recognize_loop(sim_threshold=0.4):
+    """
+    Live webcam loop: detect + embed + compare to DB.
+    Returns recognized name or 'Unknown'.
+    """
+    cap = cv2.VideoCapture(0)
+    print("[RECOG] Starting webcam. Press q to quit.")
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        bgr = frame
+        faces = fa.get(bgr)
+        # draw and annotate
+        if faces:
+            for face in faces:
+                x1, y1, x2, y2 = map(int, face.bbox[:4])
+                emb = l2_normalize(np.asarray(face.embedding, dtype=np.float32))
+                best_name = "Unknown"
+                best_score = -1.0
+                for name, db_emb in face_db.items():
+                    score = cosine_sim(emb, db_emb)
+                    if score > best_score:
+                        best_score = score
+                        best_name = name
+                label = f"{best_name} {best_score:.3f}"
+                color = (0,255,0) if best_score >= sim_threshold else (0,0,255)
+                cv2.rectangle(frame, (x1,y1), (x2,y2), color, 2)
+                cv2.putText(frame, label, (x1, max(0,y1-10)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+        cv2.imshow("ArcFace Recognition", frame)
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+        if key == ord('e'):  # enroll shortcut
+            name = input("Enter name to enroll: ").strip()
+            enroll_from_camera(name)
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+# ----------------- CLI-like entry -------------------
+if __name__ == "__main__":
+    print("Commands: (r) recognize, (c) enroll, (p) print DB, (q) quit")
+    while True:
+        cmd = input("cmd> ").strip().lower()
+        if cmd in ("r", "recognize"):
+            recognize_loop(sim_threshold=0.4)
+        elif cmd in ("c", "enroll"):
+            n = input("Name to enroll: ").strip()
+            enroll_from_camera(n, n_samples=6)
+        elif cmd in ("p", "print"):
+            print("DB:", list(face_db.keys()))
+        elif cmd in ("q", "quit", "exit"):
+            break
+        else:
+            print("Unknown command.")
