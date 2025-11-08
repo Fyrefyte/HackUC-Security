@@ -51,8 +51,8 @@ flatten_model_folder(model_dir) # Ensure the models are where they should be
 ctx_id = 0 # GPU mode
 fa = FaceAnalysis(
     name="antelopev2",
-    det_name = "2d106det.onnx", # det_name and rec_name may be unnecessary, remember to test it 
-    rec_name = "1k3d68.onnx",
+    # det_name = "2d106det.onnx", # det_name and rec_name may be unnecessary, remember to test it 
+    # rec_name = "1k3d68.onnx",
     providers=['CPUExecutionProvider'])
 
 # Prepare the face analysis. 
@@ -122,6 +122,7 @@ def remove_from_database(name):
     func_id = "REMOVE"
     if name in face_db:
         del face_db[name]
+        save_db(face_db)
         print(f"[{func_id}] Removed {name} from database.")
     else:
         print(f"[{func_id}] {name} not found in database.")
@@ -130,7 +131,9 @@ def remove_from_database(name):
 # In case you need to remove all data (mostly for testing)
 def clear_database():
     func_id = "CLEAR"
-    face_db.clear();
+    face_db.clear()
+    save_db(face_db)
+    print(f"[{func_id}] Cleared database.")
 
 # --------------- Recognize single frame -----------------
 def recognize(bgr, sim_threshold=0.4):
@@ -210,6 +213,9 @@ if __name__ == "__main__":
             recognize_loop(sim_threshold=0.4)
         elif cmd in ("e", "enroll"):
             n = input("Name to enroll: ").strip()
+            if n in list(face_db.keys()):
+                if not input("Person is already enrolled. Reenroll? (y/n): ").strip() in ("y"):
+                    break
             s = input("Number of samples: ").strip()
             try:
                 int(s)
