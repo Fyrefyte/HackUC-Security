@@ -1,7 +1,7 @@
 # Facial embedder using OpenCV and ArcFace
 
 import cv2
-import numpy as py
+import numpy as np
 import pickle
 import os
 from insightface.app import FaceAnalysis
@@ -47,7 +47,7 @@ def flatten_model_folder(model_dir):
 model_dir = os.path.expanduser("~/.insightface/models/antelopev2")
 flatten_model_folder(model_dir) # Ensure the models are where they should be
 
-# Start up the facial recognition model. TODO Make sure to release this at the end
+# Start up the facial recognition model.
 ctx_id = 0 # GPU mode
 fa = FaceAnalysis(
     name="antelopev2",
@@ -95,14 +95,15 @@ def enroll_from_camera(name, n_samples=10, required_confidence=0.5, sample_delay
 
         # Allow the user to quit
         cv2.imshow("Enroll - press q to quit", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q') or cv2.waitKey(1) & 0xFF == ord('\x1b'): # Also allow "escape" because someone's going to try that
+        key = cv2.waitKey(sample_delay)
+        if key & 0xFF == ord('q') or key & 0xFF == ord('\x1b'): # Also allow "escape" because someone's going to try that
             break
 
     # When done, release the video capture and get rid of the window
     cap.release()
     cv2.destroyAllWindows()
 
-    if len(embeddings == 0):
+    if len(embeddings) == 0:
         print(f"[{func_id}] No usable data.")
         return False
     
@@ -115,3 +116,42 @@ def enroll_from_camera(name, n_samples=10, required_confidence=0.5, sample_delay
     print(f"[{func_id}] Saved {name} with {len(embeddings)} samples.")
     return True
 
+# ----------------- Remove enrollment -------------------
+# In case you need to remove bad data or remove a person you no longer need in your system
+def remove_from_database(name):
+    func_id = "REMOVE"
+    if name in face_db:
+        face_db.remove(name)
+        print(f"[{func_id}] Removed {name} from database.")
+    else:
+        print(f"[{func_id}] {name} not found in database.")
+
+# ----------------- Clear database -------------------
+# In case you need to remove all data (mostly for testing)
+def clear_database():
+    face_db.clear();
+
+# ----------------- CLI-like entry -------------------
+# This bit allows command line interaction with the script. TODO remove before prod
+if __name__ == "__main__":
+    print("Commands: (r) recognize, (e) enroll, (p) print DB, (x) remove person, (c) clear database, (q) quit")
+    while True:
+        cmd = input("cmd> ").strip().lower()
+        if cmd in ("r", "recognize"):
+            recognize_loop(sim_threshold=0.4)
+        elif cmd in ("e", "enroll"):
+            n = input("Name to enroll: ").strip()
+            enroll_from_camera(n, n_samples=6)
+        elif cmd in ("p", "print"):
+            print("DB:", list(face_db.keys()))
+        elif cmd in ("x", "remove person"):
+            n = input("Name to remove: ").strip()
+            remove_from_database(n)
+        elif cmd in ("c", "clear database"):
+            cont = input("Confirm clearing of data (y/n)? (This cannot be undone): ").strip()
+            if cont in ("y", "confirm"):
+                clear_database()
+        elif cmd in ("q", "quit", "exit"):
+            break
+        else:
+            print("Unknown command.")
