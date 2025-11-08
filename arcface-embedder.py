@@ -153,7 +153,7 @@ def recognize(bgr, sim_threshold=0.4):
             # We take the highest score face.
             for name, db_emb in face_db.items():
                 score = cosine_sim(emb, db_emb)
-                if score > best_score:
+                if score > best_score and score > sim_threshold:
                     best_score = score
                     best_name = name
             
@@ -169,7 +169,7 @@ def recognize_loop(sim_threshold=0.4, sample_delay=1):
     func_id = "RECOG LOOP"
 
     cap = cv2.VideoCapture(0) # Default device camera
-    print("[{func_id}] Starting webcam. Press q to quit.")
+    print(f"[{func_id}] Starting webcam. Press q to quit.")
     while True:
 
         # Get a frame
@@ -201,7 +201,7 @@ def recognize_loop(sim_threshold=0.4, sample_delay=1):
     cv2.destroyAllWindows()
 
 # ----------------- CLI-like entry -------------------
-# This bit allows command line interaction with the script. TODO remove before prod
+# This bit allows command line interaction with the script. TODO remove before prod TODO add interface with frontend
 if __name__ == "__main__":
     print("Commands: (r) recognize, (e) enroll, (p) print DB, (x) remove person, (c) clear database, (q) quit")
     while True:
@@ -210,7 +210,12 @@ if __name__ == "__main__":
             recognize_loop(sim_threshold=0.4)
         elif cmd in ("e", "enroll"):
             n = input("Name to enroll: ").strip()
-            enroll_from_camera(n, n_samples=6)
+            s = input("Number of samples: ").strip()
+            try:
+                int(s)
+            except ValueError:
+                s = 6
+            enroll_from_camera(n, n_samples=int(s))
         elif cmd in ("p", "print"):
             print("DB:", list(face_db.keys()))
         elif cmd in ("x", "remove person"):
