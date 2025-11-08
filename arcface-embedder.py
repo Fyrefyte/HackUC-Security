@@ -4,7 +4,10 @@ import cv2
 import numpy as np
 import pickle
 import os
+import threading
+import time
 from insightface.app import FaceAnalysis
+from queue import Queue, Empty, Full
 
 main_font = cv2.FONT_HERSHEY_SIMPLEX
 good_color = (0,255,0)
@@ -48,15 +51,15 @@ model_dir = os.path.expanduser("~/.insightface/models/antelopev2")
 flatten_model_folder(model_dir) # Ensure the models are where they should be
 
 # Start up the facial recognition model.
-ctx_id = 0 # GPU mode
+ctx_id = -1 # GPU mode
 fa = FaceAnalysis(
     name="antelopev2",
     # det_name = "2d106det.onnx", # det_name and rec_name may be unnecessary, remember to test it 
     # rec_name = "1k3d68.onnx",
-    providers=['CPUExecutionProvider'])
+    providers=['CUDAExecutionProvider', 'DmlExecutionProvider', 'CPUExecutionProvider'])
 
 # Prepare the face analysis. 
-fa.prepare(ctx_id=ctx_id, det_size=(640,640)) # det_size determines precision, 320,320 may be better for speed in this application
+fa.prepare(ctx_id=ctx_id, det_size=(320,320)) # det_size determines precision, 320,320 may be better for speed in this application
 
 # Load up the database for later. This will store our saved faces. TODO Add ecryption
 face_db = load_db();
@@ -167,11 +170,50 @@ def recognize(bgr, sim_threshold=0.4):
     # Return the results
     return faces, best_names, best_scores
 
+# --------------- Recognition Thread ------------------
+# Ensures that the recognition can run while the live stream stays live
+frame_queue = Queue(maxsize=1)   # holds at most one frame (the most recent)
+result = {
+    "faces": [],
+    "names": [],
+    "scores": []
+}
+stop_event = threading.Event()   # allow clean shutdown if needed
+def recognize_thread(sim_threshold):
+    func_id = "RECOG THRD"
+
+    global processing
+
+    while not stop_event.is_set():
+        try:
+            # Wait for the newest frame (timeout so we can respond to stop_event)
+            frame_copy = frame_queue.get(timeout=0.2)
+        except Empty:
+            continue
+
+        # Get the faces and scores
+        faces, best_names, best_scores = recognize(frame_copy, sim_threshold)
+
+        # Update shared result
+        result["faces"] = faces
+        result["names"] = best_names
+        result["scores"] = best_scores
+
+        # Mark queue item done
+        frame_queue.task_done()
+
 # --------------- Recognition loop -----------------
 def recognize_loop(sim_threshold=0.4, sample_delay=1):
     func_id = "RECOG LOOP"
 
     cap = cv2.VideoCapture(0) # Default device camera
+
+    global latest_frame
+
+    # Configure the thread
+    recogThread = threading.Thread(target=recognize_thread, kwargs={"sim_threshold": sim_threshold}, daemon = True)
+    recogThread.start()
+
     print(f"[{func_id}] Starting webcam. Press q to quit.")
     while True:
 
@@ -179,25 +221,49 @@ def recognize_loop(sim_threshold=0.4, sample_delay=1):
         ret, frame = cap.read()
         if not ret:
             break
-        bgr = frame
+        
+        try:
+            frame_queue.put_nowait(frame.copy())
+        except Full:
+            try:
+                _ = frame_queue.get_nowait()   # drop the old frame
+                frame_queue.task_done()
+            except Empty:
+                pass
+            try:
+                frame_queue.put_nowait(frame.copy())
+            except Full:
+                # If still full, skip; worker is busy and queue remains current
+                pass
 
-        # Get the faces and scores
-        faces, best_names, best_scores = recognize(bgr, sim_threshold)
+        # Update the faces with the global result
+        faces = result["faces"]
+        best_names = result["names"]
+        best_scores = result["scores"]
 
         # Draw the indicators on each face
-        if faces:
-            for i in range(0, len(faces)):
-                x1, y1, x2, y2 = map(int, faces[i].bbox[:4])
-                label = f"{best_names[i]} {best_scores[i]:.3f}"
-                color = good_color if best_scores[i] >= sim_threshold else bad_color
-                cv2.rectangle(frame, (x1,y1), (x2,y2), color, 2)
-                cv2.putText(frame, label, (x1, max(0,y1-10)), main_font, 0.6, color, 2)
+        for i, face in enumerate(faces):
+            x1, y1, x2, y2 = map(int, face.bbox)
+            label = f"{best_names[i]} {best_scores[i]:.3f}"
+            color = good_color if best_scores[i] >= sim_threshold else bad_color
+            cv2.rectangle(frame, (x1,y1), (x2,y2), color, 2)
+            cv2.putText(frame, label, (x1, max(0,y1-10)), main_font, 0.6, color, 2)
         
         # Allow the user to quit
         cv2.imshow("Recognition - press q to quit", frame)
         key = cv2.waitKey(sample_delay)
         if key & 0xFF == ord('q') or key & 0xFF == ord('\x1b'): # Also allow "escape" because someone's going to try that
             break
+    
+    # Clean shutdown
+    stop_event.set()
+    # Give worker a moment to wake and exit
+    try:
+        # push a dummy frame to unblock the worker if it's waiting
+        frame_queue.put_nowait(np.zeros((10,10,3), dtype=np.uint8))
+    except Full:
+        pass
+    recogThread.join(timeout=1.0)
 
     # When done, release the video capture and get rid of the window
     cap.release()
