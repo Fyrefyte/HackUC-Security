@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoGate Login</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div id="header-container">
+            <div class="left-group">
+                <img src="images/Echo Gate Logo Final.png" alt="EchoGate Logo" width="60" />
+                <nav class="left-links">
+                    <a href="index.html">Home</a>
+                    <a href="#about">About</a>
+                    <a href="#team">Meet the Makers</a>
+                </nav>
+            </div>
+
+            <div class="right-container">
+
+                <div class="right-login">
+                    <a href="login.html">Login</a>
+                </div>
+
+                <a href="#" class="right-link">Get Started</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- LOGIN HERO -->
+    <section class="hero">
+        <div class="main-container" style="max-width: 450px;">
+            <h1>Login</h1>
+            <p style="color: white; font-size: 1.2rem; text-align: center;">Access your <span class="important-text">EchoGate</span> dashboard</p>
+
+            <!-- LOGIN FORM -->
+            <form class="login-form" style="width: 100%; margin-top: 20px;" action="#" method="POST">
+                <label for="email" style="color:white; font-weight:500;">Email</label>
+                <input type="email" id="email" name="email" placeholder="you@example.com" required
+                       style="width: 100%; padding: 12px; margin: 10px 0 20px 0; border-radius: 6px; border: 1px solid #333; background-color: #0f172a; color: white; font-size: 1rem;">
+
+                <label for="password" style="color:white; font-weight:500;">Password</label>
+                <input type="password" id="password" name="password" placeholder="********" required
+                       style="width: 100%; padding: 12px; margin: 10px 0 20px 0; border-radius: 6px; border: 1px solid #333; background-color: #0f172a; color: white; font-size: 1rem;">
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <label style="color: white; font-size: 0.9rem;">
+                        <input type="checkbox" name="remember" style="margin-right: 5px;"> Remember me
+                    </label>
+                    <a href="#" style="color: #38bdf8; text-decoration: none; font-size: 0.9rem; transition: color 0.3s;">
+                        Forgot password?
+                    </a>
+                </div>
+
+                <button type="submit" id="get-started-btn" style="width: 100%;">Login</button>
+            </form>
+
+            <p style="color: white; margin-top: 20px;">
+                Don't have an account?
+                <a href="#" style="color: #38bdf8; text-decoration: none; transition: color 0.3s;">Sign Up</a>
+            </p>
+        </div>
+    </section>
+
+    <footer>
+        <div class="left-stack">
+            <p class="left-content">&copy; EchoGate, 2025</p>
+            <p class="left-content">Made with safety and security in mind.</p>
+        </div>
+        <a class="middle-link" href="index.html">Back to Top</a>
+    </footer>
+
+</body>
+</html>

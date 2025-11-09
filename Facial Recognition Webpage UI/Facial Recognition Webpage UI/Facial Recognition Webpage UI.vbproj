@@ -93,6 +93,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="index.html" />
+    <Content Include="login.html" />
     <Content Include="script.js" />
     <Content Include="style.css" />
     <Content Include="Web.config" />
