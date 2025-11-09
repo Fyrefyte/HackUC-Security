@@ -24,27 +24,22 @@
             <div class="user-greeting" style="margin-right: 20px;"></div>
 
             <div class="right-container">
-
                 <div class="right-login">
                     <a href="login.html" id="login-link">Login</a>
                 </div>
-
                 <a href="signup.html" class="right-link">Get Started</a>
             </div>
         </div>
     </header>
 
+    <!-- Live video feed only -->
     <div class="dashboard-container">
-        <!-- Read-only chat -->
-        <div class="chat-box" id="chat-box">
-            <h2>Live Notifications</h2>
-            <div id="messages"></div>
-        </div>
-
-        <!-- Live video feed -->
         <div class="video-container">
-            <div id="no-live-feed"></div>
-            <img id="video-feed" alt="Live Feed" style="width:100%; height:100%;" />
+            <h2 class="video-title">Live Feed</h2>
+            <div class="video-wrapper">
+                <img id="video-feed" alt="Live Feed" />
+            </div>
+            <p style="color: white;">Don't forget to check your email for notifications.</p>
         </div>
     </div>
 
@@ -58,7 +53,6 @@
             src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
     </script>
     <script src="clerk-dev.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="dashboard.js"></script>
 </body>
 </html>
