@@ -338,9 +338,9 @@ def recognize_loop(sim_threshold=0.4, heat_threshold=40):
                 heat += 1
             else:
                 heat -= 10
-            heat = min(heat_threshold, max(0, heat))
         if not faces:
             heat -= 1
+        heat = min(heat_threshold, max(0, heat))
         
         if cooldown_timer > 0:
             cooldown_timer -= 1
