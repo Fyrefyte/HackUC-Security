@@ -293,7 +293,7 @@ if __name__ == "__main__":
             try:
                 int(s)
             except ValueError:
-                s = 6
+                s = 50
             enroll_from_camera(n, n_samples=int(s))
         elif cmd in ("p", "print"):
             print("DB:", list(face_db.keys()))
