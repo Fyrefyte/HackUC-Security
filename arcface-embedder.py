@@ -20,43 +20,6 @@ import socket
 import base64
 from io import BytesIO
 import json
-from cryptography import x509
-from cryptography.x509.oid import NameOID
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import rsa
-import datetime
-
-# ---------------- HTTPS CERTIFICATE SETUP ----------------
-CERT_FILE = "cert.pem"
-KEY_FILE = "key.pem"
-
-if not os.path.exists(CERT_FILE) or not os.path.exists(KEY_FILE):
-    print("[INFO] Generating self-signed certificate...")
-    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    with open(KEY_FILE, "wb") as f:
-        f.write(key.private_bytes(
-            serialization.Encoding.PEM,
-            serialization.PrivateFormat.TraditionalOpenSSL,
-            serialization.NoEncryption()
-        ))
-    subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "MyOrg"),
-        x509.NameAttribute(NameOID.COMMON_NAME, "localhost"),
-    ])
-    cert = x509.CertificateBuilder()\
-        .subject_name(subject)\
-        .issuer_name(issuer)\
-        .public_key(key.public_key())\
-        .serial_number(x509.random_serial_number())\
-        .not_valid_before(datetime.datetime.utcnow())\
-        .not_valid_after(datetime.datetime.utcnow() + datetime.timedelta(days=365))\
-        .add_extension(x509.SubjectAlternativeName([x509.DNSName("localhost")]), critical=False)\
-        .sign(key, hashes.SHA256())
-    with open(CERT_FILE, "wb") as f:
-        f.write(cert.public_bytes(serialization.Encoding.PEM))
-    print("[INFO] Self-signed certificate generated.")
-
 
 cap = cv2.VideoCapture(0)
 latest_frame = None
@@ -417,7 +380,7 @@ def recognize_loop(sim_threshold=0.4, heat_threshold=40):
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USER = "echo2gate@gmail.com" # dummy email
-SMTP_PASS = "" # TODO password here. THIS IS NOT PERMANENT, PLEASE FIX
+SMTP_PASS = "qeci zqpz nhbr kqkc" # TODO password here. THIS IS NOT PERMANENT, PLEASE FIX
 # Phone number and carrier gateway:
 # AT&T: @txt.att.net ---> discontinued in June 2025
 # TMobile: @tmomail.net ---> discontinued in December 2024
@@ -517,12 +480,6 @@ def events():
             yield f"data: {msg}\n\n"
     return Response(stream(), mimetype='text/event-stream')
 
-@app.route("/send_notification", methods=["POST"])
-def forward_notification():
-    data = request.json
-    requests.post("https://yourserver.com/notify", json=data)
-    return "ok"
-
 @app.route('/')
 def index():
     # Simple HTML page to view the video
@@ -547,7 +504,7 @@ if __name__ == "__main__":
     while True:
         cmd = input("cmd> ").strip().lower()
         if cmd in ("r", "recognize"):
-            threading.Thread(target=lambda: app.run(host="0.0.0.0", port=8000, ssl_context=('cert.pem', 'key.pem')), daemon=True).start() # Start the live feed
+            threading.Thread(target=lambda: app.run(host="0.0.0.0", port=8000), daemon=True).start() # Start the live feed
             recognize_loop(sim_threshold=0.4)
         elif cmd in ("e", "enroll"):
             n = input("Name to enroll: ").strip()
