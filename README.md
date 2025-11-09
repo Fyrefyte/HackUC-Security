@@ -74,6 +74,7 @@ Copy code
 ```bash
 git clone https://github.com/<your-username>/EchoGate.git
 cd EchoGate
+```
 Open index.html in a web browser to view the home page.
 
 For dashboard functionality:
