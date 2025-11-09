@@ -6,6 +6,8 @@ import pickle
 import os
 import threading
 import time
+import torch
+import onnxruntime as ort
 from insightface.app import FaceAnalysis
 from queue import Queue, Empty, Full
 
@@ -50,13 +52,17 @@ def flatten_model_folder(model_dir):
 model_dir = os.path.expanduser("~/.insightface/models/antelopev2")
 flatten_model_folder(model_dir) # Ensure the models are where they should be
 
+# Debugging
+print(ort.get_available_providers())
+print(torch.cuda.is_available())
+
 # Start up the facial recognition model.
-ctx_id = -1 # GPU mode
+ctx_id = -1 # Fallback mode
 fa = FaceAnalysis(
     name="antelopev2",
     # det_name = "2d106det.onnx", # det_name and rec_name may be unnecessary, remember to test it 
     # rec_name = "1k3d68.onnx",
-    providers=['CUDAExecutionProvider', 'DmlExecutionProvider', 'CPUExecutionProvider'])
+    providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 
 # Prepare the face analysis. 
 fa.prepare(ctx_id=ctx_id, det_size=(320,320)) # det_size determines precision, 320,320 may be better for speed in this application
