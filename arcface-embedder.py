@@ -20,9 +20,14 @@ import socket
 import base64
 from io import BytesIO
 import json
+import torch
+
+# Limit GPU memory usage to 50%
+# torch.cuda.set_per_process_memory_fraction(0.1, device=0)  # fraction of total
 
 cap = cv2.VideoCapture(0)
 latest_frame = None
+latest_frame_annotated = None
 app = Flask(__name__)
 event_queue = Queue()
 
@@ -70,14 +75,14 @@ def flatten_model_folder(model_dir):
             shutil.move(os.path.join(subfolder, f), model_dir)
         os.rmdir(subfolder)
 
-def notify(face_name, frame):
+def notify(body, frame):
     # Encode frame to JPEG
     ret, buffer = cv2.imencode('.jpg', frame)
     jpg_as_text = base64.b64encode(buffer).decode('utf-8')
 
     event = json.dumps({
         "type": "face_detected",
-        "name": face_name,
+        "body": body,
         "image": jpg_as_text
     })
 
@@ -109,9 +114,9 @@ def generate_frames():
     while True:
 
         # Get a frame
-        if latest_frame is None:
+        if latest_frame_annotated is None:
             continue
-        frame = latest_frame.copy()
+        frame = latest_frame_annotated.copy()
 
         # Encode frame as JPEG
         _, buffer = cv2.imencode('.jpg', frame)
@@ -136,7 +141,7 @@ fa = FaceAnalysis(
     providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 
 # Prepare the face analysis.
-fa.prepare(ctx_id=ctx_id, det_size=(1280,1280)) # det_size determines precision, 320,320 may be better for speed in this application
+fa.prepare(ctx_id=ctx_id, det_size=(640,640)) # det_size determines precision, 320,320 may be better for speed in this application
 
 # Load up the database for later. This will store our saved faces. TODO Add ecryption
 face_db = load_db();
@@ -281,11 +286,11 @@ def recognize_thread(sim_threshold):
 # --------------- Recognition loop -----------------
 cooldown = 2000
 cooldown_timer = 0
-def recognize_loop(sim_threshold=0.4, heat_threshold=40):
+def recognize_loop(sim_threshold=0.4, heat_threshold=100):
     func_id = "RECOG LOOP"
     heat = 0
 
-    global latest_frame, cooldown, cooldown_timer
+    global latest_frame, cooldown, cooldown_timer, latest_frame_annotated
 
     # Configure the thread
     recogThread = threading.Thread(target=recognize_thread, kwargs={"sim_threshold": sim_threshold}, daemon = True)
@@ -341,16 +346,19 @@ def recognize_loop(sim_threshold=0.4, heat_threshold=40):
         if not faces:
             heat -= 1
         heat = min(heat_threshold, max(0, heat))
+        cv2.putText(frame, f"Heat: {heat}", (3, 23), main_font, 0.8, bad_color, 2)
+
+        latest_frame_annotated = frame.copy()
         
         if cooldown_timer > 0:
             cooldown_timer -= 1
 
         # Emergency time!!!!
         if heat >= heat_threshold and cooldown_timer == 0:
+            notify("ALERT: Unknown person detected", frame)
             send_email_alert_w_file(frame, "EchoGate Alert", "ALERT: Unknown person detected")
             heat = 0
             cooldown_timer = cooldown
-            notify("ALERT: Unknown person detected", frame)
 
         # Allow the user to quit
         cv2.imshow("Recognition - press q to quit", frame)
