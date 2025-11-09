@@ -306,19 +306,19 @@ def recognize_loop(sim_threshold=0.4, heat_threshold=40):
 # --- CONFIG ---
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
-SMTP_USER = "youremail@gmail.com"        # your email
-SMTP_PASS = "your_email_password_or_app_pw"  # app password if 2FA
-# YOUR phone number and carrier gateway:
+SMTP_USER = "echo2gate@gmail.com" # dummy email
+SMTP_PASS = "" # TODO password here. THIS IS NOT PERMANENT, PLEASE FIX
+# Phone number and carrier gateway:
 # e.g. AT&T: number@txt.att.net  (recipient carrier gateway varies)
-TO_SMS_ADDRESS = "1234567890@txt.att.net"  # <-- put YOUR number and your carrier gateway here
-FROM_EMAIL = "youremail@gmail.com"
+TO_SMS_ADDRESS = "6147073765@tmomail.net"  # <-- put YOUR number and your carrier gateway here
+FROM_EMAIL = "echo2gate@gmail.com"
 # ----------------
 def send_alert_via_email2sms(message_text: str):
     msg = EmailMessage()
     msg.set_content(message_text)
     msg["Subject"] = "ALERT"
-    msg["From"] = "leowilliamcanales@gmail.com"
-    msg["To"] = "614-707-3765"
+    msg["From"] = FROM_EMAIL
+    msg["To"] = TO_SMS_ADDRESS
 
     with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as s:
         s.starttls()
@@ -329,7 +329,8 @@ def send_alert_via_email2sms(message_text: str):
 # ----------------- CLI-like entry -------------------
 # This bit allows command line interaction with the script. TODO remove before prod TODO add interface with frontend
 if __name__ == "__main__":
-    print("Commands: (r) recognize, (e) enroll, (p) print DB, (x) remove person, (c) clear database, (q) quit")
+    print("\nServer started. Check your phone for SMS confirmation.\nCommands: (r) recognize, (e) enroll, (p) print DB, (x) remove person, (c) clear database, (q) quit")
+    send_alert_via_email2sms("EchoGate has connected to this device for push notifications. Ignore this message if you didn't expect this.")
     while True:
         cmd = input("cmd> ").strip().lower()
         if cmd in ("r", "recognize"):
