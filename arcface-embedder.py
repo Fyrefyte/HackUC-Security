@@ -316,7 +316,7 @@ FROM_EMAIL = "echo2gate@gmail.com"
 def send_alert_via_email2sms(message_text: str):
     msg = EmailMessage()
     msg.set_content(message_text)
-    msg["Subject"] = "ALERT"
+    msg["Subject"] = "" # So turns out most phone carriers silently block message with ALERT/WARNING in the subject line
     msg["From"] = FROM_EMAIL
     msg["To"] = TO_SMS_ADDRESS
 
@@ -327,7 +327,7 @@ def send_alert_via_email2sms(message_text: str):
     print("Email->SMS sent (if carrier accepted it).")
 
 # ----------------- CLI-like entry -------------------
-# This bit allows command line interaction with the script. TODO remove before prod TODO add interface with frontend
+# This bit allows command line interaction with the script. TODO add interface with frontend
 if __name__ == "__main__":
     print("\nServer started. Check your phone for SMS confirmation.\nCommands: (r) recognize, (e) enroll, (p) print DB, (x) remove person, (c) clear database, (q) quit")
     send_alert_via_email2sms("EchoGate has connected to this device for push notifications. Ignore this message if you didn't expect this.")
