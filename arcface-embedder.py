@@ -15,6 +15,19 @@ from queue import Queue, Empty, Full
 from email.message import EmailMessage
 from twilio.rest import Client
 import imghdr
+from flask import Flask, Response, send_from_directory
+import socket
+
+cap = cv2.VideoCapture(0)
+latest_frame = None
+app = Flask(__name__)
+
+def camera_thread():
+    global latest_frame
+    while True:
+        ret, frame = cap.read()
+        if ret:
+            latest_frame = frame
 
 main_font = cv2.FONT_HERSHEY_SIMPLEX
 good_color = (0,255,0)
@@ -53,6 +66,43 @@ def flatten_model_folder(model_dir):
             shutil.move(os.path.join(subfolder, f), model_dir)
         os.rmdir(subfolder)
 
+def get_local_ips():
+    ips = []
+    hostname = socket.gethostname()
+    try:
+        # Try to get the primary IP
+        primary_ip = socket.gethostbyname(hostname)
+        ips.append(primary_ip)
+    except:
+        pass
+
+    # Scan all interfaces
+    try:
+        for info in socket.getaddrinfo(hostname, None):
+            ip = info[4][0]
+            if ip not in ips and ":" not in ip:  # skip IPv6 for simplicity
+                ips.append(ip)
+    except:
+        pass
+
+    return ips
+
+def generate_frames():
+    while True:
+
+        # Get a frame
+        if latest_frame is None:
+            continue
+        frame = latest_frame.copy()
+
+        # Encode frame as JPEG
+        _, buffer = cv2.imencode('.jpg', frame)
+        frame_bytes = buffer.tobytes()
+
+        # Yield in multipart format for MJPEG streaming
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
 # Activate face detector via Antelope
 model_dir = os.path.expanduser("~/.insightface/models/antelopev2")
 flatten_model_folder(model_dir) # Ensure the models are where they should be
@@ -77,7 +127,6 @@ face_db = load_db();
 def enroll_from_camera(name, n_samples=10, required_confidence=0.5):
     func_id = "ENROLL"
 
-    cap = cv2.VideoCapture(0); # Default device camera
     embeddings = []; # The array of new embeddings
     print(f"[{func_id}] {n_samples} are being collected. Move around, look in different directions, and make different expressions.")
     
@@ -85,9 +134,9 @@ def enroll_from_camera(name, n_samples=10, required_confidence=0.5):
     while (len(embeddings) < n_samples):
 
         # Get a frame
-        ret, frame = cap.read()
-        if not ret:
-            break
+        if latest_frame is None:
+            continue
+        frame = latest_frame.copy()
         bgr = frame
 
         # Get all the faces in frame
@@ -112,7 +161,6 @@ def enroll_from_camera(name, n_samples=10, required_confidence=0.5):
             break
 
     # When done, release the video capture and get rid of the window
-    cap.release()
     cv2.destroyAllWindows()
 
     # Chuck the data if there isn't any with faces
@@ -219,8 +267,6 @@ def recognize_loop(sim_threshold=0.4, heat_threshold=40):
     func_id = "RECOG LOOP"
     heat = 0
 
-    cap = cv2.VideoCapture(0) # Default device camera
-
     global latest_frame, cooldown, cooldown_timer
 
     # Configure the thread
@@ -231,10 +277,11 @@ def recognize_loop(sim_threshold=0.4, heat_threshold=40):
     while True:
 
         # Get a frame
-        ret, frame = cap.read()
-        if not ret:
-            break
-        
+        if latest_frame is None:
+            continue
+
+        frame = latest_frame.copy()
+
         try:
             frame_queue.put_nowait(frame.copy())
         except Full:
@@ -306,7 +353,6 @@ def recognize_loop(sim_threshold=0.4, heat_threshold=40):
     recogThread.join(timeout=1.0)
 
     # When done, release the video capture and get rid of the window
-    cap.release()
     cv2.destroyAllWindows()
 
 # ----------------- Emergency alert system ------------------
@@ -398,14 +444,40 @@ def send_email_alert_w_file(frame, subject: str, body: str):
     except Exception as e:
         print(f"[ALERT] Failed to send email: {e}")
 
+@app.route('/hls/<path:filename>')
+def hls_files(filename):
+    return send_from_directory('/path/to/output', filename)
+
+@app.route('/video')
+def video_feed():
+    return Response(generate_frames(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/')
+def index():
+    # Simple HTML page to view the video
+    return '''
+    <html>
+        <head>
+            <title>Live Camera Feed</title>
+        </head>
+        <body>
+            <h1>Camera Feed</h1>
+            <img src="/video" width="640" height="480" />
+        </body>
+    </html>
+    '''
+
 # ----------------- CLI-like entry -------------------
 # This bit allows command line interaction with the script. TODO add interface with frontend
 if __name__ == "__main__":
     print("\nServer started. Check for email confirmation.\nCommands: (r) recognize, (e) enroll, (p) print DB, (x) remove person, (c) clear database, (q) quit")
     send_email_alert("EchoGate Alert", "EchoGate has connected to this device for push notifications. Ignore this message if you didn't expect this.")
+    threading.Thread(target=camera_thread, daemon=True).start() # Start the cam
     while True:
         cmd = input("cmd> ").strip().lower()
         if cmd in ("r", "recognize"):
+            threading.Thread(target=lambda: app.run(host="0.0.0.0", port=8000, debug=False), daemon=True).start() # Start the live feed
             recognize_loop(sim_threshold=0.4)
         elif cmd in ("e", "enroll"):
             n = input("Name to enroll: ").strip()
@@ -431,3 +503,4 @@ if __name__ == "__main__":
             break
         else:
             print("Unknown command.")
+    cap.release()
