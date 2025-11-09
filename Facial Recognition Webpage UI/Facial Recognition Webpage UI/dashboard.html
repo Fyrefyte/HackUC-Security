@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoGate Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div id="header-container">
+            <div class="left-group">
+                <img src="images/Echo Gate Logo Final.png" alt="EchoGate Logo" width="60" />
+                <nav class="left-links">
+                    <a href="index.html">Home</a>
+                    <a href="#about">About</a>
+                    <a href="#team">Meet the Makers</a>
+                </nav>
+            </div>
+
+            <!-- Greeting -->
+            <div class="user-greeting" style="margin-right: 20px;"></div>
+
+            <div class="right-container">
+
+                <div class="right-login">
+                    <a href="login.html" id="login-link">Login</a>
+                </div>
+
+                <a href="signup.html" class="right-link">Get Started</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        <!-- Read-only chat -->
+        <div class="chat-box" id="chat-box">
+            <h2>Live Notifications</h2>
+            <div id="messages"></div>
+        </div>
+
+        <!-- Live video feed -->
+        <div class="video-container">
+            <div id="no-live-feed"></div>
+            <img id="video-feed" alt="Live Feed" style="width:100%; height:100%;" />
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; EchoGate, 2025 - Made with safety and security in mind.</p>
+    </footer>
+
+    <script async
+            crossorigin="anonymous"
+            data-clerk-publishable-key="pk_test_d2lubmluZy1wdXAtNTQuY2xlcmsuYWNjb3VudHMuZGV2JA"
+            src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+    </script>
+    <script src="clerk-dev.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>

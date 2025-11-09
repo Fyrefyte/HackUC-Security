@@ -404,151 +404,66 @@ footer {
     height: 100px;
     background-color: #1f2937;
     color: white;
-    font-family: 'Segoe UI',sans-serif;
-    position: relative; /* needed for absolute positioning of middle link */
-    padding: 0 2rem; /* inner horizontal padding */
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    flex-direction: column; /* stack items vertically */
+    justify-content: center; /* vertical centering */
+    align-items: center; /* horizontal centering */
+    gap: 0.5rem; /* optional spacing between items */
+    padding: 0 2rem;
+    box-sizing: border-box;
     margin-top: 30px;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center; /* vertical center */
 }
 
-/* Left stack sticks to the left edge */
-.left-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    text-align: left;
-}
-
-/* Left content styling */
-.left-content {
-    margin: 0;
-}
-
-/* Middle link absolutely centered */
-.middle-link {
-    position: absolute;
-    left: 50%; /* start at horizontal center */
-    transform: translateX(-50%); /* shift back by half its width */
-    text-decoration: none;
-    color: #38bdf8;
-    font-weight: 500;
-    cursor: pointer;
-    transition: transform 0.3s ease, color 0.3s ease;
-}
-
-    .middle-link:hover {
-        transform: translateX(-50%) scale(1.05);
-        color: white;
+    /* Optional: for text paragraphs inside the footer */
+    footer p {
+        margin: 0;
+        text-align: center;
     }
 
-/* TERMS AND CONDITIONS CSS */
+/* DASH CSS */
 
-/* Additional styling specific for the Terms page */
-.terms-hero {
+/* Dashboard container: full height, centered vertically */
+.dashboard-container {
     display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
+    height: calc(100vh - 60px); /* full viewport height */
+    gap: 20px; /* spacing between video and chat */
+    padding: 20px;
+    justify-content: center; /* center horizontally if extra space */
+    align-items: center; /* center vertically */
+    box-sizing: border-box;
+    margin-top: 60px;
+}
+
+/* Video container: 2/3 of screen width */
+.video-container {
+    flex: 2; /* 2/3 of horizontal space */
+    max-width: 800px; /* optional cap */
+    height: 60vh; /* video height */
+    background-color: #111;
+    display: flex;
+    justify-content: center;
     align-items: center;
-    min-height: 100vh;
-    padding: calc(60px + 20px) 20px 40px 20px; /* account for header height */
-    background-color: #18181b;
-    color: white;
-    box-sizing: border-box;
 }
 
-.terms-container {
-    max-width: 900px;
+/* Video feed */
+#video-feed {
     width: 100%;
-    background-color: #000;
-    padding: 30px;
-    border-radius: 12px;
-    border: 1px solid #333;
-    box-sizing: border-box;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px; /* optional rounded corners */
+}
+
+/* Chat box: 1/3 of width, same height as video */
+.chat-box {
+    flex: 1; /* 1/3 of horizontal space */
+    height: 60vh; /* match video height */
     overflow-y: auto;
-    max-height: 80vh;
-}
-
-    .terms-container h2 {
-        color: #38bdf8;
-        margin-bottom: 15px;
-    }
-
-    .terms-container p,
-    .terms-container li {
-        font-size: 1rem;
-        line-height: 1.6rem;
-        color: #ccc;
-        margin-bottom: 10px;
-    }
-
-    .terms-container ul {
-        margin-left: 20px;
-        margin-bottom: 15px;
-    }
-
-.back-link {
-    margin-top: 20px;
-    text-align: center;
-}
-
-    .back-link a {
-        color: #38bdf8;
-        text-decoration: none;
-        font-weight: 500;
-        transition: color 0.3s ease;
-    }
-
-        .back-link a:hover {
-            color: white;
-        }
-
-/* USER-AUTH CSS */
-
-/* Wrapper for consistent page content alignment */
-.content-wrapper {
-    max-width: 400px; /* controls the overall content width */
-    margin: 0 auto; /* centers the wrapper horizontally */
-    padding: 0 20px; /* adds some breathing room on small screens */
-}
-
-/* Button styling */
-.login-signup-btn {
-    width: 100%; /* now fills the wrapper width, aligns with other elements */
-    padding: 12px 28px;
-    font-size: 1.2rem;
-    background-color: #38bdf8;
+    background-color: #222;
     color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    text-align: center;
-    transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
-    margin-top: 20px;
-}
-
-    .login-signup-btn:hover {
-        transform: scale(1.05);
-        background-color: white;
-        color: #0f172a;
-    }
-
-/* keeps login forms aligned and centerd to stop overflowing */
-
-/* Ensure inputs include padding and border in width calculation */
-input, textarea, select, button {
-    box-sizing: border-box;
-}
-
-/* Optional: specifically style the login form inputs */
-.login-form input[type="email"],
-.login-form input[type="password"] {
-    width: 100%; /* fills the container */
-    padding: 12px 16px; /* padding inside input */
+    padding: 10px;
     border-radius: 6px;
-    border: 1px solid #333;
-    background-color: #0f172a;
-    color: white;
-    font-size: 1rem;
+    display: flex;
+    flex-direction: column;
 }
+
