@@ -17,10 +17,14 @@ from twilio.rest import Client
 import imghdr
 from flask import Flask, Response, send_from_directory
 import socket
+import base64
+from io import BytesIO
+import json
 
 cap = cv2.VideoCapture(0)
 latest_frame = None
 app = Flask(__name__)
+event_queue = Queue()
 
 def camera_thread():
     global latest_frame
@@ -65,6 +69,20 @@ def flatten_model_folder(model_dir):
         for f in os.listdir(subfolder):
             shutil.move(os.path.join(subfolder, f), model_dir)
         os.rmdir(subfolder)
+
+def notify(face_name, frame):
+    # Encode frame to JPEG
+    ret, buffer = cv2.imencode('.jpg', frame)
+    jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+
+    event = json.dumps({
+        "type": "face_detected",
+        "name": face_name,
+        "image": jpg_as_text
+    })
+
+    # Write event into your queue
+    event_queue.put(event)
 
 def get_local_ips():
     ips = []
@@ -261,7 +279,7 @@ def recognize_thread(sim_threshold):
         frame_queue.task_done()
 
 # --------------- Recognition loop -----------------
-cooldown = 200
+cooldown = 2000
 cooldown_timer = 0
 def recognize_loop(sim_threshold=0.4, heat_threshold=40):
     func_id = "RECOG LOOP"
@@ -329,9 +347,10 @@ def recognize_loop(sim_threshold=0.4, heat_threshold=40):
 
         # Emergency time!!!!
         if heat >= heat_threshold and cooldown_timer == 0:
-            send_email_alert_w_file(frame, "EchoGate Alert", "ALERT: Unknown person detected at front door")
+            send_email_alert_w_file(frame, "EchoGate Alert", "ALERT: Unknown person detected")
             heat = 0
             cooldown_timer = cooldown
+            notify("ALERT: Unknown person detected", frame)
 
         # Allow the user to quit
         cv2.imshow("Recognition - press q to quit", frame)
@@ -452,6 +471,14 @@ def hls_files(filename):
 def video_feed():
     return Response(generate_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/events')
+def events():
+    def stream():
+        while True:
+            msg = event_queue.get()
+            yield f"data: {msg}\n\n"
+    return Response(stream(), mimetype='text/event-stream')
 
 @app.route('/')
 def index():
