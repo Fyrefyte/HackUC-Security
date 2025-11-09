@@ -8,9 +8,12 @@ os.environ["ORT_LOG_VERBOSE"] = "1"
 import threading
 import time
 import torch
+import smtplib
 import onnxruntime as ort
 from insightface.app import FaceAnalysis
 from queue import Queue, Empty, Full
+from email.message import EmailMessage
+
 
 main_font = cv2.FONT_HERSHEY_SIMPLEX
 good_color = (0,255,0)
@@ -64,18 +67,18 @@ fa = FaceAnalysis(
     providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 
 # Prepare the face analysis.
-fa.prepare(ctx_id=ctx_id, det_size=(640,640)) # det_size determines precision, 320,320 may be better for speed in this application
+fa.prepare(ctx_id=ctx_id, det_size=(1280,1280)) # det_size determines precision, 320,320 may be better for speed in this application
 
 # Load up the database for later. This will store our saved faces. TODO Add ecryption
 face_db = load_db();
 
 # --------------- Enrollment function -----------------
-def enroll_from_camera(name, n_samples=10, required_confidence=0.5, sample_delay=1):
+def enroll_from_camera(name, n_samples=10, required_confidence=0.5):
     func_id = "ENROLL"
 
     cap = cv2.VideoCapture(0); # Default device camera
     embeddings = []; # The array of new embeddings
-    print(f"[{func_id}] Look at the camera for {n_samples} samples...")
+    print(f"[{func_id}] {n_samples} are being collected. Move around, look in different directions, and make different expressions.")
     
     # Loop through each sample and average at the end
     while (len(embeddings) < n_samples):
@@ -103,7 +106,7 @@ def enroll_from_camera(name, n_samples=10, required_confidence=0.5, sample_delay
 
         # Allow the user to quit
         cv2.imshow("Enroll - press q to quit", frame)
-        key = cv2.waitKey(sample_delay)
+        key = cv2.waitKey(1)
         if key & 0xFF == ord('q') or key & 0xFF == ord('\x1b'): # Also allow "escape" because someone's going to try that
             break
 
@@ -111,6 +114,7 @@ def enroll_from_camera(name, n_samples=10, required_confidence=0.5, sample_delay
     cap.release()
     cv2.destroyAllWindows()
 
+    # Chuck the data if there isn't any with faces
     if len(embeddings) == 0:
         print(f"[{func_id}] No usable data.")
         return False
@@ -208,8 +212,9 @@ def recognize_thread(sim_threshold):
         frame_queue.task_done()
 
 # --------------- Recognition loop -----------------
-def recognize_loop(sim_threshold=0.4, sample_delay=1):
+def recognize_loop(sim_threshold=0.4, heat_threshold=40):
     func_id = "RECOG LOOP"
+    heat = 0
 
     cap = cv2.VideoCapture(0) # Default device camera
 
@@ -231,7 +236,7 @@ def recognize_loop(sim_threshold=0.4, sample_delay=1):
             frame_queue.put_nowait(frame.copy())
         except Full:
             try:
-                _ = frame_queue.get_nowait()   # drop the old frame
+                _ = frame_queue.get_nowait() # drop the old frame
                 frame_queue.task_done()
             except Empty:
                 pass
@@ -253,10 +258,30 @@ def recognize_loop(sim_threshold=0.4, sample_delay=1):
             color = good_color if best_scores[i] >= sim_threshold else bad_color
             cv2.rectangle(frame, (x1,y1), (x2,y2), color, 2)
             cv2.putText(frame, label, (x1, max(0,y1-10)), main_font, 0.6, color, 2)
-        
+
+            # My unidentified person "heat" system.
+                # For every frame an unidentified person is in frame, heat increases by 1.
+                # For every frame a known person is in frame, heat decreases by 10.
+                    # This way, if someone in the system brings someone you don't know home, it won't ping you.
+                    # The fact that this doesn't simply reset heat also prevents it from completely resetting if there is a brief malfunction.
+                # If there are no faces in frame, heat slowly decreases.
+                    # Thus, if the unidentified person is out of frame briefly, their heat won't go away completely and will still probably trigger a notification.
+            if best_names[i] == "Unknown":
+                heat += 1
+            else:
+                heat -= 10
+            heat = min(heat_threshold, max(0, heat))
+        if not faces:
+            heat -= 1
+
+        # Emergency time!!!!
+        if heat >= heat_threshold:
+            send_alert_via_email2sms("ALERT: Unknown person detected at front door")
+            heat = 0
+
         # Allow the user to quit
         cv2.imshow("Recognition - press q to quit", frame)
-        key = cv2.waitKey(sample_delay)
+        key = cv2.waitKey(1)
         if key & 0xFF == ord('q') or key & 0xFF == ord('\x1b'): # Also allow "escape" because someone's going to try that
             break
     
@@ -264,6 +289,7 @@ def recognize_loop(sim_threshold=0.4, sample_delay=1):
     stop_event.set()
     recogThread.join(timeout=1.0)
     stop_event.clear()
+
     # Give worker a moment to wake and exit
     try:
         # push a dummy frame to unblock the worker if it's waiting
@@ -275,6 +301,30 @@ def recognize_loop(sim_threshold=0.4, sample_delay=1):
     # When done, release the video capture and get rid of the window
     cap.release()
     cv2.destroyAllWindows()
+
+# ----------------- Emergency alert system ------------------
+# --- CONFIG ---
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+SMTP_USER = "youremail@gmail.com"        # your email
+SMTP_PASS = "your_email_password_or_app_pw"  # app password if 2FA
+# YOUR phone number and carrier gateway:
+# e.g. AT&T: number@txt.att.net  (recipient carrier gateway varies)
+TO_SMS_ADDRESS = "1234567890@txt.att.net"  # <-- put YOUR number and your carrier gateway here
+FROM_EMAIL = "youremail@gmail.com"
+# ----------------
+def send_alert_via_email2sms(message_text: str):
+    msg = EmailMessage()
+    msg.set_content(message_text)
+    msg["Subject"] = "ALERT"
+    msg["From"] = "leowilliamcanales@gmail.com"
+    msg["To"] = "614-707-3765"
+
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as s:
+        s.starttls()
+        s.login(SMTP_USER, SMTP_PASS)
+        s.send_message(msg)
+    print("Email->SMS sent (if carrier accepted it).")
 
 # ----------------- CLI-like entry -------------------
 # This bit allows command line interaction with the script. TODO remove before prod TODO add interface with frontend
