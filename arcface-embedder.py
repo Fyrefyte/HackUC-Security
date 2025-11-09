@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import pickle
 import os
+os.environ["ORT_LOG_VERBOSE"] = "1"
 import threading
 import time
 import torch
@@ -57,15 +58,13 @@ print(ort.get_available_providers())
 print(torch.cuda.is_available())
 
 # Start up the facial recognition model.
-ctx_id = -1 # Fallback mode
+ctx_id = 0 # GPU mode
 fa = FaceAnalysis(
     name="antelopev2",
-    # det_name = "2d106det.onnx", # det_name and rec_name may be unnecessary, remember to test it 
-    # rec_name = "1k3d68.onnx",
     providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
 
-# Prepare the face analysis. 
-fa.prepare(ctx_id=ctx_id, det_size=(320,320)) # det_size determines precision, 320,320 may be better for speed in this application
+# Prepare the face analysis.
+fa.prepare(ctx_id=ctx_id, det_size=(640,640)) # det_size determines precision, 320,320 may be better for speed in this application
 
 # Load up the database for later. This will store our saved faces. TODO Add ecryption
 face_db = load_db();
@@ -263,6 +262,8 @@ def recognize_loop(sim_threshold=0.4, sample_delay=1):
     
     # Clean shutdown
     stop_event.set()
+    recogThread.join(timeout=1.0)
+    stop_event.clear()
     # Give worker a moment to wake and exit
     try:
         # push a dummy frame to unblock the worker if it's waiting
