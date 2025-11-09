@@ -286,7 +286,7 @@ def recognize_thread(sim_threshold):
 # --------------- Recognition loop -----------------
 cooldown = 2000
 cooldown_timer = 0
-def recognize_loop(sim_threshold=0.4, heat_threshold=100):
+def recognize_loop(sim_threshold=0.4, heat_threshold=240):
     func_id = "RECOG LOOP"
     heat = 0
 
@@ -504,7 +504,7 @@ def index():
     '''
 
 # ----------------- CLI-like entry -------------------
-# This bit allows command line interaction with the script. TODO add interface with frontend
+# This bit allows command line interaction with the script.
 if __name__ == "__main__":
     print("\nServer started. Check for email confirmation.\nCommands: (r) recognize, (e) enroll, (p) print DB, (x) remove person, (c) clear database, (q) quit")
     send_email_alert("EchoGate Alert", "EchoGate has connected to this device for push notifications. Ignore this message if you didn't expect this.")
