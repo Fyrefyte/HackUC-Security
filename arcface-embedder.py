@@ -6,7 +6,6 @@ import pickle
 import os
 os.environ["ORT_LOG_VERBOSE"] = "1"
 import threading
-import time
 import torch
 import smtplib
 import onnxruntime as ort
@@ -18,9 +17,8 @@ import imghdr
 from flask import Flask, Response, send_from_directory
 import socket
 import base64
-from io import BytesIO
 import json
-import torch
+import shutil
 
 # Limit GPU memory usage to 50%
 # torch.cuda.set_per_process_memory_fraction(0.1, device=0)  # fraction of total
