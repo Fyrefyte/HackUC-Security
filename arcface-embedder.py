@@ -13,7 +13,8 @@ import onnxruntime as ort
 from insightface.app import FaceAnalysis
 from queue import Queue, Empty, Full
 from email.message import EmailMessage
-
+from twilio.rest import Client
+import imghdr
 
 main_font = cv2.FONT_HERSHEY_SIMPLEX
 good_color = (0,255,0)
@@ -212,13 +213,15 @@ def recognize_thread(sim_threshold):
         frame_queue.task_done()
 
 # --------------- Recognition loop -----------------
+cooldown = 200
+cooldown_timer = 0
 def recognize_loop(sim_threshold=0.4, heat_threshold=40):
     func_id = "RECOG LOOP"
     heat = 0
 
     cap = cv2.VideoCapture(0) # Default device camera
 
-    global latest_frame
+    global latest_frame, cooldown, cooldown_timer
 
     # Configure the thread
     recogThread = threading.Thread(target=recognize_thread, kwargs={"sim_threshold": sim_threshold}, daemon = True)
@@ -273,11 +276,15 @@ def recognize_loop(sim_threshold=0.4, heat_threshold=40):
             heat = min(heat_threshold, max(0, heat))
         if not faces:
             heat -= 1
+        
+        if cooldown_timer > 0:
+            cooldown_timer -= 1
 
         # Emergency time!!!!
-        if heat >= heat_threshold:
-            send_alert_via_email2sms("ALERT: Unknown person detected at front door")
+        if heat >= heat_threshold and cooldown_timer == 0:
+            send_email_alert_w_file(frame, "EchoGate Alert", "ALERT: Unknown person detected at front door")
             heat = 0
+            cooldown_timer = cooldown
 
         # Allow the user to quit
         cv2.imshow("Recognition - press q to quit", frame)
@@ -303,20 +310,24 @@ def recognize_loop(sim_threshold=0.4, heat_threshold=40):
     cv2.destroyAllWindows()
 
 # ----------------- Emergency alert system ------------------
+# Email to SMS                                    DO NOT USE
 # --- CONFIG ---
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 SMTP_USER = "echo2gate@gmail.com" # dummy email
 SMTP_PASS = "" # TODO password here. THIS IS NOT PERMANENT, PLEASE FIX
 # Phone number and carrier gateway:
-# e.g. AT&T: number@txt.att.net  (recipient carrier gateway varies)
-TO_SMS_ADDRESS = "6147073765@tmomail.net"  # <-- put YOUR number and your carrier gateway here
+# AT&T: @txt.att.net ---> discontinued in June 2025
+# TMobile: @tmomail.net ---> discontinued in December 2024
+# Verison: @vtext.com ---> technically exists but not consistent
+# Sprint: @messaging.sprintpcs.com
+PROVIDER_POSTFIX = "@vtext.com"
+TO_SMS_ADDRESS = "6146801273" + PROVIDER_POSTFIX  # <-- put YOUR number and your carrier gateway here
 FROM_EMAIL = "echo2gate@gmail.com"
 # ----------------
 def send_alert_via_email2sms(message_text: str):
     msg = EmailMessage()
     msg.set_content(message_text)
-    msg["Subject"] = "" # So turns out most phone carriers silently block message with ALERT/WARNING in the subject line
     msg["From"] = FROM_EMAIL
     msg["To"] = TO_SMS_ADDRESS
 
@@ -324,13 +335,74 @@ def send_alert_via_email2sms(message_text: str):
         s.starttls()
         s.login(SMTP_USER, SMTP_PASS)
         s.send_message(msg)
-    print("Email->SMS sent (if carrier accepted it).")
+    # print("Email->SMS sent (if carrier accepted it).")
+
+# Twilio (better alternative) (takes too long since they have to confirm it)
+TWILIO_ACCOUNT_SID = ""
+TWILIO_AUTH_TOKEN = "" # TODO NEVER commit with this here
+TWILIO_NUMBER = "+15136665816"     # Twilio phone number
+ALERT_NUMBER = "+16147073765"      # Receiving phone number
+
+client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+
+def send_alert_twilio(message_text: str):
+    client.messages.create(
+        body=message_text,
+        from_=TWILIO_NUMBER,
+        to=ALERT_NUMBER
+    )
+
+# Normal old email. Lame but works for now.
+TO_EMAIL = input("Input your email for notifications: ")
+def send_email_alert(subject: str, body: str):
+    msg = EmailMessage()
+    msg.set_content(body)
+    msg["Subject"] = subject
+    msg["From"] = FROM_EMAIL
+    msg["To"] = TO_EMAIL
+
+    try:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(FROM_EMAIL, SMTP_PASS)
+            server.send_message(msg)
+        print(f"[ALERT] Email sent successfully to {TO_EMAIL}")
+    except Exception as e:
+        print(f"[ALERT] Failed to send email: {e}")
+def send_email_alert_w_file(frame, subject: str, body: str):
+    # Encode frame as JPEG in memory
+    success, encoded_image = cv2.imencode('.jpg', frame)
+    if not success:
+        print("Failed to encode frame.")
+        return
+
+    img_bytes = encoded_image.tobytes()
+
+    msg = EmailMessage()
+    msg.set_content(body)
+    msg["Subject"] = subject
+    msg["From"] = FROM_EMAIL
+    msg["To"] = TO_EMAIL
+
+    # Determine image type for email attachment
+    img_type = imghdr.what(None, img_bytes)  # should be "jpeg"
+
+    msg.add_attachment(img_bytes, maintype="image", subtype=img_type, filename="capture.jpg")
+
+    try:
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls()
+            server.login(FROM_EMAIL, SMTP_PASS)
+            server.send_message(msg)
+        print(f"[ALERT] Email sent successfully to {TO_EMAIL}")
+    except Exception as e:
+        print(f"[ALERT] Failed to send email: {e}")
 
 # ----------------- CLI-like entry -------------------
 # This bit allows command line interaction with the script. TODO add interface with frontend
 if __name__ == "__main__":
-    print("\nServer started. Check your phone for SMS confirmation.\nCommands: (r) recognize, (e) enroll, (p) print DB, (x) remove person, (c) clear database, (q) quit")
-    send_alert_via_email2sms("EchoGate has connected to this device for push notifications. Ignore this message if you didn't expect this.")
+    print("\nServer started. Check for email confirmation.\nCommands: (r) recognize, (e) enroll, (p) print DB, (x) remove person, (c) clear database, (q) quit")
+    send_email_alert("EchoGate Alert", "EchoGate has connected to this device for push notifications. Ignore this message if you didn't expect this.")
     while True:
         cmd = input("cmd> ").strip().lower()
         if cmd in ("r", "recognize"):
