@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateCarousel() {
         const offset = -currentIndex * 100;
         carouselInner.style.transform = `translateX(${offset}%)`;
+        carouselInner.style.transition = 'transform 0.5s ease-in-out';
     }
 
     leftArrow.addEventListener('click', () => {
@@ -47,4 +48,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateCarousel();
 });
-
