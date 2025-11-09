@@ -21,13 +21,19 @@
                 </nav>
             </div>
 
+            <!-- Greeting -->
+            <div class="user-greeting"></div>
+
             <div class="right-container">
 
                 <div class="right-login">
-                    <a href="login.html">Login</a>
+                    <a href="login.html" id="login-link">Login</a>
                 </div>
 
-                <a href="#" class="right-link">Get Started</a>
+                <a href="signup.html" class="right-link">Get Started</a>
+
+                <!-- Placeholder for logout button -->
+                <button id="logout-btn" style="display:none; background-color:#f87171; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:500; margin-left:10px;">Logout</button>
             </div>
         </div>
     </header>
@@ -38,7 +44,9 @@
             <img src="images/Echo Gate Logo Final.png" alt="EchoGate Logo" width="200" />
             <h1>EchoGate</h1>
             <h2>Make your home <span class="important-text">safer</span> and <span class="important-text">smarter</span>.</h2>
-            <button id="get-started-btn">Begin Today</button>
+            <a href="signup.html">
+                <button id="get-started-btn">Begin Today</button>
+            </a>
         </div>
     </section>
 
@@ -114,7 +122,7 @@
                                 Hello, my name is Eric Ngo and I am an 18 year old
                                 electrical engineering student at the University
                                 of Cincinnati! I enjoy gaming, video editing, and
-                                rock climbing. For <span class="important-text">EchoGate</span> 
+                                rock climbing. For <span class="important-text">EchoGate</span>
                                 I worked on the logo design and video presentation.
                             </p>
                         </div>
@@ -148,6 +156,12 @@
         <a class="middle-link" href="index.html">Back to Top</a>
     </footer>
 
+    <script async
+            crossorigin="anonymous"
+            data-clerk-publishable-key="pk_test_d2lubmluZy1wdXAtNTQuY2xlcmsuYWNjb3VudHMuZGV2JA"
+            src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js">
+    </script>
+    <script src="clerk-dev.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

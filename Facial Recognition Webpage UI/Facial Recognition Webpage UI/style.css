@@ -7,14 +7,14 @@ header {
     left: 0;
     width: 100%;
     height: 60px;
-    background-color: black;
+    background-color: #1f2937;
     color: white;
-    padding: 0 20px;
+    padding: 20px 40px;
     display: flex;
     align-items: center;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     z-index: 1000;
-    font-family: sans-serif;
+    font-family: 'Segoe UI',sans-serif;
 }
 
 /* Header container */
@@ -50,11 +50,40 @@ header {
         color: #38bdf8;
     }
 
-/* Container for right-side items */
+/* Greeting styling */
+.user-greeting {
+    font-size: 1rem; /* Larger text */
+    font-style: italic; /* Italic */
+    font-weight: 300; /* Optional weight */
+    color: white; /* Match header text */
+    text-align: right; /* Right-justify inside its container */
+    margin-left: auto; /* Push to the right within flex layout */
+}
+
+
+/* Style for right-container */
 .right-container {
     display: flex;
-    align-items: center; /* vertical center */
-    gap: 10px; /* space between login and button */
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    margin-right: 50px; /* moves all items 50px left from the screen edge */
+}
+
+
+/* Adjust logout button */
+#logout-btn {
+    display: none; /* shown dynamically via JS */
+    background-color: #f87171;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    white-space: nowrap; /* prevent text from breaking */
+    flex-shrink: 0;
 }
 
 /* Login link */
@@ -76,7 +105,7 @@ header {
     background-color: #38bdf8;
     color: white;
     padding: 8px 16px;
-    margin-right: 30px;
+    margin-right: 0;
     border-radius: 6px;
     font-weight: 400;
     text-decoration: none;
@@ -89,13 +118,22 @@ header {
         color: #0f172a;
     }
 
+@media (max-width: 600px) {
+    header {
+        padding: 20px; /* reduce horizontal padding */
+    }
+
+    .right-container {
+        gap: 5px;
+    }
+}
 
 /* ==============================
    HERO SECTION
    ============================== */
 body {
     background-color: #18181b;
-    font-family: sans-serif;
+    font-family: 'Segoe UI',sans-serif;
 }
 
 .hero {
@@ -232,7 +270,8 @@ h2 {
 
 /* Paragraph box */
 .project-desc {
-    background-color: #000;
+    background-color: #1f2937;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     padding: 30px;
     border-radius: 10px;
     border: 1px solid #333;
@@ -273,7 +312,8 @@ h2 {
     width: 100%;
     max-width: 450px;
     margin: 0 auto;
-    background-color: #000;
+    background-color: #1f2937;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     border: 1px solid #333;
     border-radius: 12px;
     padding: 30px 0;
@@ -362,9 +402,9 @@ h2 {
 footer {
     width: 100%;
     height: 100px;
-    background-color: black;
+    background-color: #1f2937;
     color: white;
-    font-family: sans-serif;
+    font-family: 'Segoe UI',sans-serif;
     position: relative; /* needed for absolute positioning of middle link */
     padding: 0 2rem; /* inner horizontal padding */
     margin-top: 30px;
@@ -402,3 +442,113 @@ footer {
         transform: translateX(-50%) scale(1.05);
         color: white;
     }
+
+/* TERMS AND CONDITIONS CSS */
+
+/* Additional styling specific for the Terms page */
+.terms-hero {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    min-height: 100vh;
+    padding: calc(60px + 20px) 20px 40px 20px; /* account for header height */
+    background-color: #18181b;
+    color: white;
+    box-sizing: border-box;
+}
+
+.terms-container {
+    max-width: 900px;
+    width: 100%;
+    background-color: #000;
+    padding: 30px;
+    border-radius: 12px;
+    border: 1px solid #333;
+    box-sizing: border-box;
+    overflow-y: auto;
+    max-height: 80vh;
+}
+
+    .terms-container h2 {
+        color: #38bdf8;
+        margin-bottom: 15px;
+    }
+
+    .terms-container p,
+    .terms-container li {
+        font-size: 1rem;
+        line-height: 1.6rem;
+        color: #ccc;
+        margin-bottom: 10px;
+    }
+
+    .terms-container ul {
+        margin-left: 20px;
+        margin-bottom: 15px;
+    }
+
+.back-link {
+    margin-top: 20px;
+    text-align: center;
+}
+
+    .back-link a {
+        color: #38bdf8;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s ease;
+    }
+
+        .back-link a:hover {
+            color: white;
+        }
+
+/* USER-AUTH CSS */
+
+/* Wrapper for consistent page content alignment */
+.content-wrapper {
+    max-width: 400px; /* controls the overall content width */
+    margin: 0 auto; /* centers the wrapper horizontally */
+    padding: 0 20px; /* adds some breathing room on small screens */
+}
+
+/* Button styling */
+.login-signup-btn {
+    width: 100%; /* now fills the wrapper width, aligns with other elements */
+    padding: 12px 28px;
+    font-size: 1.2rem;
+    background-color: #38bdf8;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+    margin-top: 20px;
+}
+
+    .login-signup-btn:hover {
+        transform: scale(1.05);
+        background-color: white;
+        color: #0f172a;
+    }
+
+/* keeps login forms aligned and centerd to stop overflowing */
+
+/* Ensure inputs include padding and border in width calculation */
+input, textarea, select, button {
+    box-sizing: border-box;
+}
+
+/* Optional: specifically style the login form inputs */
+.login-form input[type="email"],
+.login-form input[type="password"] {
+    width: 100%; /* fills the container */
+    padding: 12px 16px; /* padding inside input */
+    border-radius: 6px;
+    border: 1px solid #333;
+    background-color: #0f172a;
+    color: white;
+    font-size: 1rem;
+}
