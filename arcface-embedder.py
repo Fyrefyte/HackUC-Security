@@ -6,7 +6,7 @@ import pickle
 import os
 os.environ["ORT_LOG_VERBOSE"] = "1"
 import threading
-import torch
+# import torch
 import smtplib
 import onnxruntime as ort
 from insightface.app import FaceAnalysis
@@ -130,10 +130,10 @@ flatten_model_folder(model_dir) # Ensure the models are where they should be
 
 # Debugging
 print(ort.get_available_providers())
-print(torch.cuda.is_available())
+# print(torch.cuda.is_available())
 
 # Start up the facial recognition model.
-ctx_id = 0 # GPU mode
+ctx_id = -1 # GPU mode
 fa = FaceAnalysis(
     name="antelopev2",
     providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
