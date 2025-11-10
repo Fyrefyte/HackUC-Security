@@ -72,8 +72,8 @@ Copy code
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/<your-username>/EchoGate.git
-cd EchoGate
+git clone https://github.com/Fyrefyte/HackUC-Security.git
+cd HackUC-Security
 ```
 Open index.html in a web browser to view the home page.
 
