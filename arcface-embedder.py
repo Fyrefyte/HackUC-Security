@@ -133,7 +133,7 @@ print(ort.get_available_providers())
 # print(torch.cuda.is_available())
 
 # Start up the facial recognition model.
-ctx_id = -1 # GPU mode
+ctx_id = 0 # GPU mode
 fa = FaceAnalysis(
     name="antelopev2",
     providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
